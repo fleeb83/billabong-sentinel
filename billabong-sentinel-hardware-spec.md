@@ -4,7 +4,7 @@
 **Project:** Billabong Sentinel
 **Author:** Russell — Barker Trailers / Lions Club Kaniva
 **Date:** February 2026
-**License:** CERN-OHL-S v2 (Open Source Hardware)
+**License:** CERN-OHL-W v2 (hardware) · MIT (firmware) · CC BY 4.0 (documentation)
 **Status:** Draft — OSHWLab Stars 2026 Entry
 
 ---
@@ -529,6 +529,9 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 | PCB standard | IPC-2221B |
 | RoHS | All components sourced via LCSC — RoHS compliant |
 | Battery safety | DW01A + FS8205 protection meets UN 38.3 transport requirements |
+| Hardware licence | CERN-OHL-W v2 (weakly reciprocal — modifications must be shared, end products need not be) |
+| Firmware licence | MIT |
+| Documentation licence | CC BY 4.0 |
 
 ---
 
