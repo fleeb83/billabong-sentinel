@@ -1,123 +1,96 @@
 # Billabong Sentinel
 
-## Open-Source Solar-Powered LoRa Mesh Water Level Monitor for Rural Australia
+### Solar-powered LoRa mesh water level monitoring for rural Australia
 
 ---
 
-### The Problem
+Stock water is a constant headache on large rural properties. Troughs run dry, floats fail, tanks overflow, and by the time you find out on the next round you've already lost time and potentially stock. Commercial monitors exist but they're expensive, need cellular coverage, and charge monthly fees on top.
 
-A dry water trough on a remote paddock is one of the most common and costly problems in Australian livestock farming. By the time a farmer discovers it on the next routine check, animals may have been without water for days. Commercial water level monitors exist, but they cost $500–$1,500 per unit, require monthly cellular subscriptions, and don't work where there's no phone signal — which is most of where they're needed.
-
----
-
-### The Solution
-
-**Billabong Sentinel** is a fully open-source, solar-powered water level monitoring network built for properties without cellular coverage. A weatherproof sensor node sits at each trough or dam. A single gateway at the homestead collects data from all nodes over a self-healing LoRa mesh and serves a local web dashboard — no internet required, no subscription, no ongoing cost.
-
-The complete system — hardware, firmware, enclosure, and documentation — is open source and designed to be reproduced by anyone with access to EasyEDA Pro and JLCPCB.
+Billabong Sentinel is a practical alternative. It uses LoRa mesh radio to link sensor nodes at each trough or dam back to a gateway at the homestead. The gateway runs a local web dashboard and can push alerts to Home Assistant via MQTT. No internet required, no subscription, and the nodes run indefinitely on a 1W solar panel.
 
 **GitHub:** [https://github.com/fleeb83/billabong-sentinel](https://github.com/fleeb83/billabong-sentinel)
 
 ---
 
-### System Overview
+### How it works
 
 ```
-[Node 1]──LoRa mesh──[Node 2]──LoRa mesh──[Node 3]
-              │                      │
-         LoRa mesh               LoRa mesh
-              │                      │
-         [Node 4]──────────────[Gateway]──WiFi──[Web Dashboard]
-                                    │
-                               MQTT (optional)
-                                    │
-                           [Home Assistant]
+[Node 1]--LoRa mesh--[Node 2]--LoRa mesh--[Node 3]
+             |                      |
+        LoRa mesh               LoRa mesh
+             |                      |
+        [Node 4]--------------[Gateway]--WiFi--[Dashboard]
+                                   |
+                              MQTT (optional)
 ```
 
-Each **Billabong Sentinel Node** wakes from deep sleep every 15 minutes, reads the water level and ambient conditions, transmits via LoRa mesh to the gateway, then returns to deep sleep. On a 6,000mAh battery with a 1W solar panel, nodes operate indefinitely — with over 100 days of battery reserve even without any solar input.
+Each node wakes on an RTC alarm every 15 minutes, samples water level (pressure transducer), ambient conditions (SHT40), and internal enclosure humidity (SHT31 as a seal-integrity check), then transmits the packet over the LoRa mesh and goes back to sleep. Active window is about 3 seconds. The gateway stays on, handles routing and storage, and serves the dashboard.
 
-The **Billabong Sentinel Gateway** receives all node data, stores 90 days of history, and serves a responsive local web dashboard viewable on any phone or browser on the farm network.
+Packets route through neighbouring nodes if there's no direct path to the gateway, so coverage extends well beyond a single radio hop.
 
 ---
 
-### Key Features
+### Key features
 
-- **LoRa mesh networking** — nodes relay packets for each other, extending range and routing around terrain. No repeater infrastructure required.
-- **Submersible pressure transducer** — measures water depth from 0–5m with ~1mm resolution. Far more reliable than float switches.
-- **Water consumption rate analytics** — the gateway calculates consumption rate (L/hour) from successive readings, enabling early detection of leaks, overflow, and livestock behaviour anomalies.
-- **Seal integrity monitoring** — an internal humidity sensor detects enclosure gasket failure *before* water damage occurs. Rising internal humidity triggers an alert.
-- **Configurable alerts** — low water, trough overflow, node offline, seal breach, low battery, and leak detection. Delivered via the dashboard and MQTT (Home Assistant compatible).
-- **Hardware watchdog** — TPL5110 hard-resets the entire node if firmware locks up, ensuring autonomous recovery in unattended field deployment.
-- **Shared node/gateway PCB** — a single PCB design serves both roles via a solder bridge, halving design and manufacturing complexity.
-- **Sub-$125 AUD per node** — including PCB, components, enclosure, and sensor. Commercial equivalents charge this per month in subscription fees.
+- **LoRa mesh, not star topology.** Nodes relay for each other. No repeater hardware needed.
+- **Pressure transducer sensing.** 0-5m range, ~1mm resolution. More accurate and more reliable than float switches.
+- **Consumption rate tracking.** The gateway calculates litres per hour per node from the level readings. Useful for catching overnight leaks and spotting unusual usage.
+- **Seal integrity monitoring.** An internal SHT31 watches enclosure humidity. If the gasket starts to fail, you get an alert before water reaches the PCB.
+- **Hardware watchdog.** TPL5110 hard-resets the node if firmware hangs. A node in a paddock 10km away needs to recover itself.
+- **Shared PCB.** Node and gateway run from the same board. A solder bridge picks the mode. One design, one JLCPCB order.
+- **~$125 AUD per node** including PCB, enclosure, 18650s, solar panel, and sensor.
 
 ---
 
 ### Hardware
 
-#### Node
-
 | Component | Part |
 |-----------|------|
 | MCU | ESP32-C3-MINI-1 (~5µA deep sleep) |
-| LoRa radio | SX1276 @ 915MHz (AU915) |
-| Water level | Submersible pressure transducer, 0–5m |
-| Ambient sensor | SHT40 (external, in 3D-printed Stevenson screen) |
-| Enclosure diagnostic | SHT31 (internal humidity, seal integrity) |
+| LoRa | SX1276 @ 915MHz (AU915) |
+| Water level | Submersible pressure transducer, 0-5m, vented cable |
+| Ambient | SHT40 (external, 3D-printed Stevenson screen housing) |
+| Enclosure check | SHT31 (internal, PCB-mounted) |
 | RTC | DS3231 (±2ppm TCXO, CR2032 backup) |
 | Solar charger | CN3791 (MPPT-like input tracking) |
-| Regulator | TPS63021 buck-boost (3.3V across full Li-ion range) |
+| Regulator | TPS63021 buck-boost (3.3V stable across full Li-ion range) |
 | Battery protection | DW01A + FS8205 |
-| Watchdog | TPL5110 (hard reset on firmware lockup) |
-| Battery | 2× 18650 in parallel (6,000mAh) |
+| Watchdog | TPL5110 |
+| Battery | 2x 18650 in parallel (6,000mAh) |
 
-**Power consumption:** ~1.07mAh/day at 15-minute sample intervals. A 1W solar panel in rural Australia provides roughly 1,000× more energy than the node consumes.
+Power draw is about 1.07mAh/day at 15-minute intervals. A 1W panel in rural Australia produces around 1,000x that on an average day.
 
-#### Enclosure
-
-IP68 target. ASA 3D-printed via JLCPCB. Nitrile O-ring lid seal, IP68 cable gland for sensor, IP68 waterproof USB-C port for field firmware updates, Gore-Tex vent plug for pressure equalisation, stainless mounting lugs for post or rail installation.
+The enclosure is ASA 3D-printed via JLCPCB, IP68 rated with a nitrile O-ring lid seal, IP68 cable gland, waterproof USB-C port for field firmware updates, and a Gore-Tex vent plug.
 
 ---
 
 ### Firmware
 
-Built on **ESP-IDF v5.x** (native, no Arduino layer). RadioLib for SX1276 control with a custom lightweight mesh protocol. FreeRTOS tasks for concurrent LoRa receive, web serving, and MQTT on the gateway. `esp_https_ota` for WiFi OTA firmware updates; LoRa-relayed OTA for remote node updates.
+ESP-IDF v5.x (native, no Arduino). RadioLib for SX1276 with a custom lightweight mesh layer on top. FreeRTOS tasks on the gateway for concurrent LoRa receive, web serving, and MQTT. Remote nodes can receive OTA updates over LoRa when a USB-C connection isn't practical.
 
 ---
 
-### Web Dashboard
+### Dashboard
 
-Served directly from the gateway (no cloud, no subscription). Single-page app using `esp_http_server` and Chart.js. Shows live water levels, 7-day trends, consumption rates, alert history, and node signal strength. Mobile-responsive. Home Assistant integration via MQTT auto-discovery.
+Runs locally on the gateway. Built on `esp_http_server` with Chart.js for trend graphs. Shows live levels, 7-day history, consumption rate, alert log, and node signal strength. Mobile-friendly. MQTT output includes Home Assistant auto-discovery topics.
 
 ---
 
-### Open Source
+### Open source
 
-All design files are released under open licenses chosen to maximise community collaboration:
+All hardware, firmware, enclosure files, and documentation are published under open licences:
 
-| Layer | License |
+| Layer | Licence |
 |-------|---------|
 | Hardware (schematics, PCB, enclosure) | CERN-OHL-W v2 |
 | Firmware | MIT |
 | Documentation | CC BY 4.0 |
 
-The full repository — firmware, EasyEDA Pro project files, 3D enclosure STL/STEP, assembly guide, field installation guide, calibration procedure, and complete BOM — is published on GitHub and OSHWLab.
+Everything needed to reproduce the project is in the repo: EasyEDA Pro files, Gerbers, BOM with LCSC part numbers, STL files, assembly guide, field installation guide, and calibration procedure.
 
 **GitHub:** [https://github.com/fleeb83/billabong-sentinel](https://github.com/fleeb83/billabong-sentinel)
 
 ---
 
-### Who Is This For?
-
-Any farmer, grazier, or rural landowner who needs to monitor water points across a large property — especially where there's no phone signal. The system is designed to be built and deployed by someone with basic electronics skills, and the documentation covers everything from PCB assembly to field installation to dashboard setup.
-
----
-
-### About
-
 **Author:** Russell Thomas
-**Designed in:** EasyEDA Pro
-**Manufactured via:** JLCPCB
-**License:** CERN-OHL-W v2 · MIT · CC BY 4.0
-
-*Built for the bush.*
+Designed in EasyEDA Pro · Manufactured via JLCPCB · CERN-OHL-W v2 / MIT / CC BY 4.0

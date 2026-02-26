@@ -1,38 +1,38 @@
-# Billabong Sentinel — Rural Water Level Monitoring System
+# Billabong Sentinel: Rural Water Level Monitoring System
 ## Hardware Specification v0.2
 
 **Project:** Billabong Sentinel
 **Author:** Russell Thomas
 **Date:** February 2026
 **License:** CERN-OHL-W v2 (hardware) · MIT (firmware) · CC BY 4.0 (documentation)
-**Status:** Draft — OSHWLab Stars 2026 Entry
+**Status:** Draft, OSHWLab Stars 2026 Entry
 
 ---
 
 ## 1. Overview
 
-### 1.1 Problem Statement
+### 1.1 Background
 
-Rural Australian farmers managing large properties face a persistent, costly problem: stock water troughs and tanks run dry without warning. A single dry trough on a remote paddock can mean dead or stressed livestock discovered days later. Commercial cellular-based water level monitors cost $500–$1,500 per unit plus monthly subscription fees, and they don't work where there is no cellular coverage — which is most of where they are needed.
+Rural Australian farmers managing large properties often have no practical way to monitor stock water remotely. Troughs and tanks can run dry without warning, and a dry trough on a remote paddock may go unnoticed for days. Commercial cellular-based water level monitors cost $500–$1,500 per unit plus monthly subscription fees, and cellular coverage is absent across much of the land where these devices would be used.
 
-Billabong Sentinel solves this with an open-source, solar-powered, LoRa mesh water monitoring network. A farmer installs a node at each trough or dam, a single gateway at the homestead, and gets a live web dashboard showing water levels across the entire property — with no subscription, no cellular dependency, and no ongoing cost.
+Billabong Sentinel is an open-source, solar-powered, LoRa mesh water monitoring network. A farmer installs a node at each trough or dam and a single gateway at the homestead. The gateway serves a local web dashboard showing water levels across the property, with no subscription fees, no cellular dependency, and no ongoing cost.
 
 ### 1.2 System Summary
 
 Billabong Sentinel consists of two open-source hardware designs:
 
-- **Billabong Sentinel Node** — a weatherproof, solar-powered sensor unit deployed at each water point
-- **Billabong Sentinel Gateway** — a base station that aggregates all node data and serves a local web dashboard
+- **Billabong Sentinel Node:** a weatherproof, solar-powered sensor unit deployed at each water point
+- **Billabong Sentinel Gateway:** a base station that aggregates all node data and serves a local web dashboard
 
 Both designs share the same PCB, differentiated by a solder bridge. All hardware is designed in EasyEDA Pro, manufactured via JLCPCB, and fully documented for community reproduction.
 
 ### 1.3 Key Innovations
 
 1. **Mesh networking, not star topology.** LoRa nodes relay packets for each other, extending range beyond line-of-sight and routing around obstacles. No repeater infrastructure required.
-2. **Enclosure seal integrity monitoring.** An internal humidity sensor detects gasket degradation before water damage occurs — a genuinely novel diagnostic for field-deployed electronics.
+2. **Enclosure seal integrity monitoring.** An internal humidity sensor detects gasket degradation before water damage occurs, allowing seal failures to be caught before they cause damage to the electronics.
 3. **Water consumption rate analytics.** The gateway calculates water consumption rate (L/hour) from successive pressure readings, enabling early detection of leaks, trough overflow, and livestock behaviour anomalies.
-4. **Shared node/gateway PCB.** A single PCB design serves both roles via a configuration solder bridge, halving design effort and enabling community members to deploy either role from the same order.
-5. **Hardware watchdog for unattended autonomy.** TPL5110 hard-resets the entire system if firmware locks up — no human intervention required in remote paddock deployments.
+4. **Shared node/gateway PCB.** A single PCB design serves both roles via a configuration solder bridge. Community members can order one PCB and deploy it as either a node or a gateway.
+5. **Hardware watchdog.** TPL5110 hard-resets the entire system if firmware locks up, with no human intervention required in remote paddock deployments.
 6. **Sub-$100 AUD per node.** Target landed cost is under AUD $100 per node including PCB, components, enclosure, and sensor. Commercial equivalents charge this per month in subscription fees alone.
 
 ---
@@ -136,7 +136,7 @@ WiFi used for OTA firmware updates during maintenance. BLE used for initial node
 1. 1kΩ series resistor (limits fault current)
 2. PRTR5V0U2X TVS diode to GND (clamps transients from long cable)
 3. 10nF + 100Ω RC low-pass filter (rejects RF and switching noise)
-4. 2:1 resistor divider (100kΩ / 100kΩ) — maps 0–4.5V sensor output to 0–2.25V, within ESP32-C3 ADC input range
+4. 2:1 resistor divider (100kΩ / 100kΩ), maps 0–4.5V sensor output to 0–2.25V, within ESP32-C3 ADC input range
 5. ADC input on ESP32-C3 (12-bit, 0–2.5V attenuation mode)
 
 **Sensor power:** 3.3V ratiometric sensors require a stable reference. Sensor excitation supplied from the switched sensor rail (not always-on), eliminating quiescent draw during deep sleep.
@@ -159,11 +159,11 @@ WiFi used for OTA firmware updates during maintenance. BLE used for initial node
 | Parameter | Value |
 |-----------|-------|
 | IC | SHT31 |
-| Interface | I2C (address 0x44, shared bus — SHT40 uses 0x44 on separate I2C port or address-select resistor) |
+| Interface | I2C (address 0x44, shared bus; SHT40 uses 0x44 on separate I2C port or address-select resistor) |
 | Location | PCB-mounted inside enclosure |
 | Alert threshold | >80% RH sustained for 30 minutes → seal breach alert |
 
-**I2C bus:** Single I2C bus (SDA GPIO5, SCL GPIO6). SHT40 external and SHT31 internal use different I2C addresses (0x44 and 0x45 via ADDR pin). DS3231 at 0x68. Pull-ups: 4.7kΩ to switched 3.3V sensor rail — pull-ups are powered down with the sensor rail during deep sleep, eliminating the pull-up current path through floating GPIO pins.
+**I2C bus:** Single I2C bus (SDA GPIO5, SCL GPIO6). SHT40 external and SHT31 internal use different I2C addresses (0x44 and 0x45 via ADDR pin). DS3231 at 0x68. Pull-ups: 4.7kΩ to switched 3.3V sensor rail. These are powered down with the sensor rail during deep sleep, eliminating the pull-up current path through floating GPIO pins.
 
 ### 3.5 Real-Time Clock
 
@@ -177,7 +177,7 @@ WiFi used for OTA firmware updates during maintenance. BLE used for initial node
 | Current (main) | ~200µA active, ~110µA standby |
 | Current (coin cell) | ~3µA (backup mode only) |
 
-The DS3231 remains powered from the always-on battery rail at all times. It is the primary wake source — its alarm output triggers ESP32-C3 wakeup rather than relying on the ESP32 internal timer, ensuring accurate timing independent of sleep drift.
+The DS3231 remains powered from the always-on battery rail at all times. It is the primary wake source. Its alarm output triggers ESP32-C3 wakeup rather than relying on the ESP32 internal timer, ensuring accurate timing independent of sleep drift.
 
 ### 3.6 Power System
 
@@ -220,7 +220,7 @@ Over-discharge threshold: 2.88V (DW01A default). Over-charge: 4.28V.
 | Efficiency | Up to 95% |
 | Quiescent current | ~50µA |
 
-A buck-boost is required because the Li-ion battery voltage (3.0–4.2V) spans the target output (3.3V). A simple LDO fails when battery voltage drops below 3.3V + dropout. The TPS63021 maintains regulated 3.3V across the full battery range, maximising usable capacity and preventing brownouts during transmission peaks.
+A buck-boost is required because the Li-ion battery voltage (3.0–4.2V) spans the target output (3.3V). A simple LDO fails when battery voltage drops below 3.3V + dropout. The TPS63021 maintains regulated 3.3V across the full battery range, covering the gap where an LDO would drop out and ensuring stable operation during transmit current peaks.
 
 **Sensor power rail:** A secondary switched rail powers all sensors (SHT40, SHT31, pressure transducer, SX1276 RF switch if used) via a P-channel MOSFET (Si2301) controlled by GPIO3. This rail is cut during deep sleep, eliminating sensor quiescent currents and I2C pull-up paths.
 
@@ -258,7 +258,7 @@ The watchdog ensures autonomous recovery from firmware lockups in unattended dep
 | Functions | Firmware flash, serial debug, 5V input power, OTA trigger |
 | Protection | ESD on USB data lines (PRTR5V0U2X) |
 
-When USB is connected, the CH340C enumerates as a serial port. The auto-reset circuit (capacitor + transistor on EN and GPIO9/BOOT) allows esptool to flash without manual button pressing — important for field firmware updates.
+When USB is connected, the CH340C enumerates as a serial port. The auto-reset circuit (capacitor + transistor on EN and GPIO9/BOOT) allows esptool to flash without manual button pressing, which is useful for field firmware updates.
 
 ### 3.9 Node Identification and Provisioning
 
@@ -341,10 +341,10 @@ Both variants populated from the same JLCPCB assembly order; DNP components note
 - Auto-refreshes every 60 seconds; WebSocket push for real-time alerts
 
 **Dashboard views:**
-1. **Overview** — card per node showing: name, current level (mm + %), trend arrow, last seen, battery status
-2. **Node detail** — 24h and 7-day level charts, consumption rate, alert history, signal strength
-3. **System** — all node RSSI map, gateway uptime, storage usage
-4. **Alerts** — configurable thresholds per node; alert log
+1. **Overview:** card per node showing: name, current level (mm + %), trend arrow, last seen, battery status
+2. **Node detail:** 24h and 7-day level charts, consumption rate, alert history, signal strength
+3. **System:** all node RSSI map, gateway uptime, storage usage
+4. **Alerts:** configurable thresholds per node; alert log
 
 ### 4.4 MQTT Integration
 
@@ -372,10 +372,10 @@ Compatible with Home Assistant MQTT auto-discovery.
 **Target SDK:** ESP-IDF v5.x
 
 **Components/libraries:**
-- RadioLib (ESP-IDF HAL — SX1276 via `spi_master` driver)
+- RadioLib (ESP-IDF HAL, SX1276 via `spi_master` driver)
 - `driver/i2c_master` (ESP-IDF 5.x I2C driver for SHT40, SHT31, DS3231)
 - Custom SHT40, SHT31, DS3231 thin drivers (I2C register reads, no Arduino deps)
-- `nvs_flash` (NVS — config, calibration, node ID storage)
+- `nvs_flash` (NVS: config, calibration, node ID storage)
 - `esp_sleep` (deep sleep, wakeup config)
 - `esp_https_ota` (WiFi OTA)
 - `esp_bt` / NimBLE (BLE provisioning)
@@ -403,7 +403,7 @@ COLD_BOOT → PROVISION_CHECK → SAMPLE → MESH_TX → SLEEP
 **Target SDK:** ESP-IDF v5.x
 
 **Components/libraries:**
-- RadioLib (ESP-IDF HAL — mesh receive + relay)
+- RadioLib (ESP-IDF HAL, mesh receive + relay)
 - `esp_http_server` (ESP-IDF native HTTP server for dashboard + JSON API)
 - `esp_mqtt` (ESP-IDF native MQTT client)
 - `cJSON` (ESP-IDF built-in JSON serialisation)
@@ -444,14 +444,14 @@ LoRa OTA is slow (~1 hour for 512KB at 1% duty cycle) but enables remote updates
 | Solar connector | IP68 rated JST-PH 2-pin |
 | Antenna | SMA bulkhead, stainless, sealed with silicone o-ring |
 | Mounting | Two external lugs for M8 stainless U-bolt (trough rail or star picket mount) |
-| Battery access | Lid removal exposes 18650 holders — no tools required |
-| Vent | Gore-Tex vent plug (M12) — equalises pressure, excludes water and dust |
+| Battery access | Lid removal exposes 18650 holders (no tools required) |
+| Vent | Gore-Tex vent plug (M12); equalises pressure, excludes water and dust |
 | Desiccant | Moulded 30cc silica gel sachet holder in base; sachet replaced at battery service interval |
 | Stevenson screen | Small louvred housing (25mm dia) for external SHT40; prints as one piece; clips onto sensor cable |
 
 ### 6.2 Gateway Enclosure
 
-- Standard ABS IP54 DIN rail enclosure (sourced off-shelf) — gateway lives in a farm office or shed
+- Standard ABS IP54 DIN rail enclosure (sourced off-shelf); intended for a farm office or shed
 - PCB mounts to standard DIN rail bracket
 - USB-C power input and RJ45 (optional) via panel knockouts
 
@@ -459,18 +459,18 @@ LoRa OTA is slow (~1 hour for 512KB at 1% duty cycle) but enables remote updates
 
 These steps are mandatory for IP68 integrity and must be followed during field installation:
 
-1. **Drip loop** — sensor cable must form a downward U-loop before entering the cable gland. Water running down the cable drips off the bottom of the loop and cannot wick into the gland.
-2. **Cable gland torque** — tighten to manufacturer specification (typically 2.5Nm for PG9). Hand-tight is insufficient.
-3. **O-ring inspection** — before each lid reinstallation, inspect the nitrile O-ring. Replace if flattened, cracked, or shows UV degradation. Spare O-rings included with each unit.
-4. **USB-C cap** — tethered cap must be fully seated and retaining ring finger-tightened when port not in use.
-5. **Vent plug** — must not be painted over, obscured by silicone sealant, or blocked.
-6. **SMA seal** — confirm antenna SMA nut is tight and O-ring is seated.
+1. **Drip loop:** sensor cable must form a downward U-loop before entering the cable gland. Water running down the cable drips off the bottom of the loop and cannot wick into the gland.
+2. **Cable gland torque:** tighten to manufacturer specification (typically 2.5Nm for PG9). Hand-tight is insufficient.
+3. **O-ring inspection:** before each lid reinstallation, inspect the nitrile O-ring. Replace if flattened, cracked, or shows UV degradation. Spare O-rings included with each unit.
+4. **USB-C cap:** tethered cap must be fully seated and retaining ring finger-tightened when port not in use.
+5. **Vent plug:** must not be painted over, obscured by silicone sealant, or blocked.
+6. **SMA seal:** confirm antenna SMA nut is tight and O-ring is seated.
 
 ---
 
 ## 7. Open-Source Documentation Plan
 
-Comprehensive documentation is central to the OSHWLab Stars submission. All of the following will be published before the submission deadline:
+The following will be published before the submission deadline:
 
 ### 7.1 OSHWLab Project Page
 
@@ -527,9 +527,9 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 | Max EIRP | ≤30dBm (firmware limited to +17dBm TX + 2dBi antenna = 19dBm EIRP; well within limit) |
 | Duty cycle | Firmware-enforced; 15-min sample interval provides <0.1% duty cycle |
 | PCB standard | IPC-2221B |
-| RoHS | All components sourced via LCSC — RoHS compliant |
+| RoHS | All components sourced via LCSC; RoHS compliant |
 | Battery safety | DW01A + FS8205 protection meets UN 38.3 transport requirements |
-| Hardware licence | CERN-OHL-W v2 (weakly reciprocal — modifications must be shared, end products need not be) |
+| Hardware licence | CERN-OHL-W v2 (weakly reciprocal: modifications must be shared, end products need not be) |
 | Firmware licence | MIT |
 | Documentation licence | CC BY 4.0 |
 
@@ -540,17 +540,17 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 | Dimension | Approach |
 |-----------|----------|
 | Energy source | Solar primary; 18650 battery buffer; no mains power at node |
-| Standby consumption | ~15µA — comparable to a coin cell slowly discharging |
+| Standby consumption | ~15µA (comparable to a coin cell slowly discharging) |
 | Component lifetime | 18650 cells rated >500 cycles; solar panel >20 year life; IP68 enclosure protects PCB from corrosion |
 | Repairability | 18650 cells user-replaceable without tools; sensor cable field-replaceable via cable gland; O-rings a consumable spares item |
-| Vs. cellular alternative | Cellular water monitors require always-on modems (~50mA); Billabong Sentinel nodes use ~1000× less power |
+| vs cellular | Cellular water monitors require always-on modems (~50mA); Billabong Sentinel nodes use ~1000× less power |
 | PCB longevity | Conformal coating on assembled PCB recommended for coastal/humid deployments |
-| Enclosure material | ASA chosen over ABS for UV stability — no UV degradation cracking over 10+ year outdoor life |
+| Enclosure material | ASA chosen over ABS for UV stability; no UV degradation cracking over 10+ year outdoor life |
 | End of life | PCB is RoHS compliant; 18650 cells recycled via battery recycling programs |
 
 ---
 
-## 10. Bill of Materials — Node (Key Components)
+## 10. Bill of Materials: Node (Key Components)
 
 | Ref | Component | Part | LCSC # |
 |-----|-----------|------|--------|
@@ -610,7 +610,7 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 - Final external SHT40 mini-enclosure dimensions (pending PCB layout confirmation)
 - Pressure transducer connector at PCB (terminal block vs JST-XH)
 - Gateway e-ink display inclusion in v1.0 vs v1.1
-- BLE provisioning app — native or web BLE?
+- BLE provisioning app: native or web BLE?
 
 ---
 
