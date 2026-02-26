@@ -2,7 +2,7 @@
 ## Hardware Specification v0.2
 
 **Project:** Billabong Sentinel
-**Author:** Russell — Barker Trailers / Lions Club Kaniva
+**Author:** Russell Thomas
 **Date:** February 2026
 **License:** CERN-OHL-W v2 (hardware) · MIT (firmware) · CC BY 4.0 (documentation)
 **Status:** Draft — OSHWLab Stars 2026 Entry

@@ -115,7 +115,7 @@ Any farmer, grazier, or rural landowner who needs to monitor water points across
 
 ### About
 
-**Author:** Russell Thomas — Barker Trailers / Lions Club Kaniva, Victoria, Australia
+**Author:** Russell Thomas
 **Designed in:** EasyEDA Pro
 **Manufactured via:** JLCPCB
 **License:** CERN-OHL-W v2 · MIT · CC BY 4.0
