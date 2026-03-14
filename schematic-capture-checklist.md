@@ -19,8 +19,6 @@ Primary goal for rev A:
 - MCP73871 USB / solar charger
 - TPS63021 3.3V buck-boost regulator
 - 2x 18650 in parallel
-- SHT40 external ambient sensor
-- SHT31 internal enclosure sensor
 - 0.5-4.5V analog pressure transducer
 - Switched 5V excitation rail for pressure sensor
 - ESP32-C3 deep sleep timer as wake source
@@ -41,7 +39,6 @@ Include:
 - battery protection stage
 - dual 18650 parallel connection
 - VIN_CHG bulk capacitor
-- battery measurement divider if used
 - USB / solar / battery / system-power test points
 
 Checklist:
@@ -63,7 +60,6 @@ Include:
 - TPS63021 main 3.3V regulator
 - enable pin behavior
 - bulk and local decoupling
-- switched 3.3V sensor rail if retained after sleep-leakage review
 - switched 5V pressure-sensor excitation rail
 - rail control nets from MCU
 
@@ -115,7 +111,7 @@ Checklist:
 - confirm RF connector choice and grounding approach
 - confirm that schematic symbols/footprints match the chosen RF implementation
 
-### Sheet 5: Sensors and Analog Front End
+### Sheet 5: Pressure Sensor and Analog Front End
 
 Include:
 
@@ -124,9 +120,6 @@ Include:
 - RC filter
 - resistor divider
 - ADC net to MCU
-- SHT40 interface
-- SHT31 interface
-- switched-I2C pull-ups
 
 Checklist:
 
@@ -134,8 +127,6 @@ Checklist:
 - confirm divider ratio leaves ADC headroom
 - confirm ADC source impedance is acceptable for ESP32-C3 ADC sampling
 - confirm TVS choice makes sense for a long outdoor cable
-- confirm SHT31 address pinning to 0x45
-- confirm external SHT40 connector/wiring assumptions
 - confirm whether any extra filtering or transient protection is needed on external sensor lines
 
 ### Sheet 6: Connectors, Mechanical Interfaces, and Service Points
@@ -164,14 +155,11 @@ Checklist:
 - `VCHG_OUT` or equivalent charger/battery node
 - `+3V3`
 - `+5V_SENSOR`
-- `+3V3_SENSOR`
 - `USB_VBUS`
 - `LORA_NSS`
 - `LORA_NRST`
 - `LORA_DIO1`
 - `LORA_BUSY`
-- `I2C_SDA`
-- `I2C_SCL`
 - `PRESSURE_ADC`
 - `SENSOR_5V_EN`
 
@@ -185,8 +173,6 @@ Verify against primary datasheets:
 - E22-900M22S
 - MCP73871
 - TPS63021
-- SHT40
-- SHT31
 - chosen pressure transducer
 - protection devices used on USB, RF, and sensor lines
 

@@ -8,7 +8,7 @@ Stock water is a constant headache on large rural properties. Troughs run dry, f
 
 Billabong Sentinel is a practical alternative. It uses LoRa mesh radio to link sensor nodes at each trough or dam back to a gateway at the homestead. The gateway runs a local web dashboard and can push alerts to Home Assistant via MQTT. No internet required, no subscription, and the nodes run indefinitely on a 1W solar panel.
 
-**Status:** active schematic capture. The current working design has the power tree, pressure front end, ESP32-C3, and LoRa module direction captured, but schematic review and cleanup are still in progress before PCB.
+**Status:** active schematic capture. The current working design has the power tree, pressure front end, ESP32-C3, and LoRa module direction captured, but schematic review and cleanup are still in progress before PCB. The earlier environmental-sensor idea has been deferred from rev A because the practical GPIO budget is already spoken for by the pressure path, USB, LoRa control, and bring-up support circuitry.
 
 **GitHub:** [https://github.com/fleeb83/billabong-sentinel](https://github.com/fleeb83/billabong-sentinel)
 
@@ -26,7 +26,7 @@ Billabong Sentinel is a practical alternative. It uses LoRa mesh radio to link s
                               MQTT (optional)
 ```
 
-Each node wakes on the ESP32-C3 deep sleep timer every 15 minutes, powers its sensors briefly, samples water level (pressure transducer), ambient conditions (SHT40), and internal enclosure humidity (SHT31 as a seal-integrity check), then transmits the packet over the LoRa mesh and goes back to sleep. Active window is about 2-3 seconds. The gateway stays on, handles routing and storage, and serves the dashboard.
+Each node wakes on the ESP32-C3 deep sleep timer every 15 minutes, powers the pressure sensor briefly, samples water level, then transmits the packet over the LoRa mesh and goes back to sleep. Active window is about 2-3 seconds. The gateway stays on, handles routing and storage, and serves the dashboard.
 
 Packets route through neighbouring nodes if there's no direct path to the gateway, so coverage extends well beyond a single radio hop.
 
@@ -37,7 +37,6 @@ Packets route through neighbouring nodes if there's no direct path to the gatewa
 - **LoRa mesh, not star topology.** Nodes relay for each other. No repeater hardware needed.
 - **Pressure transducer sensing.** 0-5m range, ~1mm resolution. More accurate and more reliable than float switches.
 - **Consumption rate tracking.** The gateway calculates litres per hour per node from the level readings. Useful for catching overnight leaks and spotting unusual usage.
-- **Seal integrity monitoring.** An internal SHT31 watches enclosure humidity. If the gasket starts to fail, you get an alert before water reaches the PCB.
 - **Node-first hardware.** Rev A prioritises a simple, low-power field node before a separate gateway board.
 - **Deep-sleep first.** The node relies on ESP32-C3 deep sleep and switched sensor rails instead of overlapping wake schemes.
 - **~$125 AUD per node** including PCB, enclosure, 18650s, solar panel, and sensor.
@@ -51,8 +50,6 @@ Packets route through neighbouring nodes if there's no direct path to the gatewa
 | MCU | ESP32-C3-MINI-1 (~5µA deep sleep) |
 | LoRa | EBYTE E22-900M22S (SX1262-based) @ 915MHz (AU915) |
 | Water level | Submersible pressure transducer, 0-5m, vented cable |
-| Ambient | SHT40 (external, 3D-printed Stevenson screen housing) |
-| Enclosure check | SHT31 (internal, PCB-mounted) |
 | Solar charger | MCP73871 (USB/solar charging with power-path management and VPCC input control) |
 | Regulator | TPS63021 buck-boost (3.3V stable across full Li-ion range) |
 | Battery protection | DW01A + FS8205 |

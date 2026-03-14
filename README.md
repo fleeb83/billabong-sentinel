@@ -22,7 +22,7 @@ The web dashboard runs locally on the gateway. Alerts for low water, leaks, and 
 
 Commercial cellular water monitors run $500-$1,500 per unit plus monthly fees, and most don't work where there's no phone signal anyway. A Billabong Sentinel node comes in at around $125 AUD all up.
 
-**Status:** active schematic capture and design review. The power tree, pressure front end, ESP32-C3, and LoRa module direction are captured in the working schematic, but the design is not yet at schematic signoff or PCB layout.
+**Status:** schematic capture has completed a disciplined review pass against the current rev-A direction, and the project is now moving into PCB floorplanning and layout preparation. The power tree, pressure front end, ESP32-C3, and LoRa module direction are captured in the working schematic, but the design is not yet at PCB signoff. The earlier SHT40/SHT31 environmental sensors have been deferred from rev A because the practical GPIO budget is now consumed by the pressure path, USB, LoRa control, and bring-up circuitry.
 
 ---
 
@@ -54,8 +54,7 @@ If a node doesn't have direct line-of-sight to the gateway, packets hop through 
 | 📡 | **LoRa mesh** | Multi-hop 915MHz (AU915). Nodes relay for each other. No repeater infrastructure. |
 | ☀️ | **Solar powered** | 1W panel + 6,000mAh 18650 backup. Target rev A draw is roughly 4-6mAh/day at 15-min intervals. |
 | 💧 | **Consumption analytics** | Gateway tracks L/hour per node. Picks up leaks, overflow, and unusual usage overnight. |
-| 🔒 | **Enclosure diagnostics** | Internal humidity sensor watches for gasket failure before water gets to the PCB. |
-| 🔔 | **Configurable alerts** | Low water, overflow, node offline, seal breach, low battery, suspected leak. |
+| 🔔 | **Configurable alerts** | Low water, overflow, node offline, and suspected leak. |
 | 🔁 | **Node-first hardware** | Rev A prioritises a simple, low-power field node before a separate gateway board. |
 | 🔧 | **Deep-sleep first** | The node relies on ESP32-C3 deep sleep and switched sensor rails instead of overlapping wake schemes. |
 | 🏠 | **Home Assistant** | MQTT auto-discovery. Drops straight into an existing setup. |
@@ -88,9 +87,6 @@ If a node doesn't have direct line-of-sight to the gateway, packets hop through 
 | Sensor | IC | Location | Purpose |
 |--------|----|----------|---------|
 | Water level | Pressure transducer (0-5m) | Submerged | Depth in mm |
-| Ambient temp/humidity | SHT40 | External Stevenson screen | Environmental logging |
-| Enclosure diagnostic | SHT31 | PCB (internal) | Seal integrity |
-
 </details>
 
 <details>
@@ -131,7 +127,6 @@ firmware/
 │   ├── main/
 │   └── components/
 │       ├── lora_mesh/      # Mesh protocol over RadioLib
-│       ├── sensor_drivers/ # SHT40 and SHT31 (native I2C)
 │       └── provisioning/   # BLE + native USB setup
 └── gateway/            # ESP-IDF project
     ├── main/

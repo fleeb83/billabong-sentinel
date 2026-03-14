@@ -5,7 +5,7 @@
 **Author:** Russell Thomas
 **Date:** February 2026
 **License:** CERN-OHL-S v2 (hardware) · MIT (firmware) · CC BY 4.0 (documentation)
-**Status:** Draft, active schematic capture reconciliation for OSHWLab Stars 2026
+**Status:** Draft, schematic reviewed and moving into PCB floorplanning for OSHWLab Stars 2026
 
 ---
 
@@ -29,11 +29,10 @@ Rev A prioritises the node hardware first. The gateway is planned as a separate 
 ### 1.3 Key Innovations
 
 1. **Mesh networking, not star topology.** LoRa nodes relay packets for each other, extending range beyond line-of-sight and routing around obstacles. No repeater infrastructure required.
-2. **Enclosure seal integrity monitoring.** An internal humidity sensor detects gasket degradation before water damage occurs, allowing seal failures to be caught before they cause damage to the electronics.
-3. **Water consumption rate analytics.** The gateway calculates water consumption rate (L/hour) from successive pressure readings, enabling early detection of leaks, trough overflow, and livestock behaviour anomalies.
-4. **Node-first architecture.** Rev A focuses on getting the low-power field node correct before a separate gateway board is captured, reducing architectural risk.
-5. **Low-power architecture.** Deep sleep, switched sensor rails, and a constrained analog front end keep the node simple and power-aware.
-6. **Sub-$125 AUD per node.** Target landed cost is around AUD $125 per node in low volume, with room to reduce cost at higher quantities.
+2. **Water consumption rate analytics.** The gateway calculates water consumption rate (L/hour) from successive pressure readings, enabling early detection of leaks, trough overflow, and livestock behaviour anomalies.
+3. **Node-first architecture.** Rev A focuses on getting the low-power field node correct before a separate gateway board is captured, reducing architectural risk.
+4. **Low-power architecture.** Deep sleep and a constrained analog front end keep the node simple and power-aware.
+5. **Sub-$125 AUD per node.** Target landed cost is around AUD $125 per node in low volume, with room to reduce cost at higher quantities.
 
 ---
 
@@ -65,11 +64,11 @@ Rev A prioritises the node hardware first. The gateway is planned as a separate 
 ### 2.2 Data Flow
 
 1. Node wakes from ESP32-C3 deep sleep timer (15-minute default, configurable)
-2. Sensors powered up via switched rails
-3. Pressure transducer, SHT40, and SHT31 sampled
-4. Packet assembled: `{node_id, seq, water_mm, temp_c, humidity_pct, internal_temp_c, internal_humidity_pct, battery_mv, solar_mv, rssi_last}`
+2. Pressure sensor excitation rail enabled
+3. Pressure transducer sampled
+4. Packet assembled: `{node_id, seq, water_mm, rssi_last}`
 5. The E22-900M22S transmits via mesh route to gateway
-6. All peripherals powered down; ESP32-C3 returns to deep sleep
+6. Pressure rail powered down; ESP32-C3 returns to deep sleep
 7. Gateway timestamps packet reception, stores it in a circular buffer (planned LittleFS storage), and updates the dashboard
 
 ### 2.3 Alert System
@@ -81,8 +80,6 @@ Configurable alert thresholds stored at the gateway, triggered conditions:
 | Low water | Level < threshold (e.g. 200mm) | MQTT publish, dashboard banner |
 | Trough overflow | Level > max threshold sustained > 10 min | MQTT publish |
 | No contact | Node silent > 2× sample interval | Dashboard warning |
-| Seal breach | Internal RH > 80% for 30 min | MQTT publish, dashboard warning |
-| Low battery | Battery voltage < 3.3V | Dashboard warning |
 | Leak detected | Consumption rate > normal range at night | MQTT publish |
 
 ---
@@ -103,7 +100,7 @@ Configurable alert thresholds stored at the gateway, triggered conditions:
 
 WiFi can be used for maintenance or provisioning assistance when USB is not practical. BLE is used for initial node provisioning (set node name, sample interval, thresholds) via mobile app or serial terminal.
 
-**GPIO management during deep sleep:** All GPIO pin states are explicitly configured before entering deep sleep. Sensor power rail GPIO is driven low. SPI and I2C pins are set to input (no drive) to prevent parasitic current paths.
+**GPIO management during deep sleep:** All GPIO pin states are explicitly configured before entering deep sleep. The pressure-sensor power rail GPIO is driven low. Unused interfaces are set to a safe low-leakage state to prevent parasitic current paths.
 
 ### 3.2 LoRa Radio
 
@@ -145,25 +142,11 @@ WiFi can be used for maintenance or provisioning assistance when USB is not prac
 
 ### 3.4 Environmental Sensors
 
-**External (ambient):**
+Environmental sensors are deferred from rev A.
 
-| Parameter | Value |
-|-----------|-------|
-| IC | SHT40 |
-| Interface | I2C (address 0x44) |
-| Location | External to enclosure, inside 3D-printed Stevenson screen mini-housing |
-| Housing | 25mm diameter, louvred ASA print; UV-stable; mounted on sensor cable 300mm below enclosure |
+The earlier SHT40 external ambient sensor and SHT31 internal enclosure-humidity monitor were useful feature candidates, but the current rev-A schematic prioritises the pressure path, USB, LoRa control, and safe boot/support circuitry on the available GPIO budget. Reintroducing the I2C sensor block would now either force a broader GPIO reshuffle or add extra complexity that is out of proportion for the first hardware pass.
 
-**Internal (enclosure diagnostic):**
-
-| Parameter | Value |
-|-----------|-------|
-| IC | SHT31 |
-| Interface | I2C (address 0x45, shared bus) |
-| Location | PCB-mounted inside enclosure |
-| Alert threshold | >80% RH sustained for 30 minutes → seal breach alert |
-
-**I2C bus:** Single I2C bus. SHT40 external and SHT31 internal use addresses 0x44 and 0x45 respectively. Pull-ups are intended to sit on a switched sensor-side rail so they disappear during deep sleep and do not create a leakage path. The exact switched 3.3V implementation still needs to be closed in the schematic.
+Environmental sensing remains a candidate for a later revision once the pressure-only node is validated in hardware.
 
 ### 3.5 Wake Strategy
 
@@ -221,7 +204,7 @@ The MCP73871 is intentionally a simpler rev A choice than a true MPPT charger. T
 
 A buck-boost is required because the Li-ion battery voltage (3.0–4.2V) spans the target output (3.3V). A simple LDO fails when battery voltage drops below 3.3V + dropout. The TPS63021 maintains regulated 3.3V across the full battery range, covering the gap where an LDO would drop out and ensuring stable operation during transmit current peaks.
 
-**Sensor power rails:** A switched 3.3V rail powers the digital sensors and I2C pull-ups. A separate switched 5V excitation rail powers the pressure transducer only during sampling. Both rails are off during deep sleep.
+**Sensor power rails:** Rev A uses a switched 5V excitation rail for the pressure transducer only. A separate switched 3.3V sensor rail is not populated in the current rev-A scope.
 
 #### 3.6.5 Power Budget
 
@@ -280,7 +263,7 @@ When USB is connected, the ESP32-C3 native USB path is the intended programming 
 - Avoid ESP32-C3 strapping pins for LoRa reset, rail enable, or other outputs that could disturb boot.
 - Reserve one ADC-capable GPIO exclusively for the pressure transducer input.
 - Reserve GPIOs for E22-900M22S `BUSY`, `DIO1`, `NRST`, `NSS`, `TXEN`, and `RXEN` without disturbing boot.
-- Reserve one GPIO for the switched 5V excitation rail enable, and only add a separate switched 3.3V rail enable if the final sleep-leakage review justifies it.
+- Reserve one GPIO for the switched 5V excitation rail enable.
 - Reserve a GPIO or comparator input for USB-VBUS detection if that feature survives schematic review.
 - Final GPIO allocation will be frozen during schematic capture against the ESP32-C3-MINI-1 datasheet and boot-strapping requirements.
 
@@ -323,7 +306,7 @@ The gateway is intentionally split from the node in rev A. The always-on gateway
 - Auto-refreshes every 60 seconds; WebSocket push for real-time alerts
 
 **Dashboard views:**
-1. **Overview:** card per node showing: name, current level (mm + %), trend arrow, last seen, battery status
+1. **Overview:** card per node showing: name, current level (mm + %), trend arrow, and last seen
 2. **Node detail:** 24h and 7-day level charts, consumption rate, alert history, signal strength
 3. **System:** all node RSSI map, gateway uptime, storage usage
 4. **Alerts:** configurable thresholds per node; alert log
@@ -334,10 +317,7 @@ Topics published (prefix configurable):
 ```
 billabong-sentinel/{node_name}/water_mm
 billabong-sentinel/{node_name}/water_pct
-billabong-sentinel/{node_name}/temp_c
-billabong-sentinel/{node_name}/humidity_pct
-billabong-sentinel/{node_name}/battery_mv
-billabong-sentinel/{node_name}/status          # "ok" | "low_water" | "no_contact" | "seal_breach"
+billabong-sentinel/{node_name}/status          # "ok" | "low_water" | "no_contact" | "leak_detected"
 billabong-sentinel/gateway/status
 ```
 
@@ -355,8 +335,7 @@ Compatible with Home Assistant MQTT auto-discovery.
 
 **Components/libraries:**
 - RadioLib (ESP-IDF HAL, SX1262 / E22-900M22S via `spi_master` driver)
-- `driver/i2c_master` (ESP-IDF 5.x I2C driver for SHT40 and SHT31)
-- Custom SHT40 and SHT31 thin drivers (I2C register reads, no Arduino deps)
+- Pressure sensor sampling and calibration logic
 - `nvs_flash` (NVS: config, calibration, node ID storage)
 - `esp_sleep` (deep sleep, wakeup config)
 - `esp_https_ota` (WiFi OTA)
@@ -373,7 +352,7 @@ COLD_BOOT → PROVISION_CHECK → SAMPLE → MESH_TX → SLEEP
 
 **Deep sleep entry sequence:**
 1. Assert sensor rail GPIO low via `gpio_set_level()`
-2. Hold SPI/I2C pins as input-only via `gpio_set_direction(GPIO_MODE_INPUT)`
+2. Hold unused peripheral pins in safe low-leakage states
 3. Configure timer wakeup via `esp_sleep_enable_timer_wakeup()`
 4. Call `esp_deep_sleep_start()`
 5. Wake on timer expiry or USB-VBUS edge
@@ -429,7 +408,6 @@ LoRa OTA is slow (~1 hour for 512KB at 1% duty cycle) but enables remote updates
 | Battery access | Lid removal exposes 18650 holders (no tools required) |
 | Vent | Gore-Tex vent plug (M12); equalises pressure, excludes water and dust |
 | Desiccant | Moulded 30cc silica gel sachet holder in base; sachet replaced at battery service interval |
-| Stevenson screen | Small louvred housing (25mm dia) for external SHT40; prints as one piece; clips onto sensor cable |
 
 ### 6.2 Gateway Enclosure
 
@@ -488,7 +466,6 @@ Step-by-step guide covering:
 - PCB inspection and test point checks before assembly
 - 18650 cell installation and polarity verification
 - Sensor cable installation through cable gland
-- External SHT40 Stevenson screen mounting
 - Antenna installation and U.FL to SMA connection
 - Firmware flash procedure via USB-C
 - Provisioning (setting node name, gateway address, thresholds)
@@ -553,7 +530,7 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 | USB data ESD | intended direction, not yet fully captured in latest netlist | USBLC6-2SC6 | C2827654 |
 | USB-C receptacle | intended direction, not yet fully captured in latest netlist | TYPE-C-31-M-12 | C165948 |
 
-This table reflects the current design direction rather than a release-ready BOM. The latest working netlist already captures the power tree, pressure front end, ESP32-C3, E22-900M22S, and 5V excitation path, but the USB-C/native-USB block and some sensor-side details still need closure before schematic signoff.
+This table reflects the current design direction rather than a release-ready BOM. The latest working netlist already captures the power tree, pressure front end, ESP32-C3, E22-900M22S, and 5V excitation path, but the USB-C/native-USB block and remaining protection details still need closure before schematic signoff.
 
 ### 10.1 Externally Sourced Items (Not via JLCPCB)
 
@@ -583,14 +560,26 @@ This table reflects the current design direction rather than a release-ready BOM
 ## 11. Open Questions
 
 - Exact 5V excitation regulator for the chosen pressure transducer
-- Final external SHT40 mini-enclosure dimensions (pending PCB layout confirmation)
 - Pressure transducer connector at PCB (terminal block vs JST-XH)
 - Gateway e-ink display inclusion in v1.0 vs v1.1
 - BLE provisioning app: native or web BLE?
 
 ---
 
-## 12. Revision History
+## 12. PCB Direction Notes
+
+- The schematic has now completed a serious review pass and the next stage is PCB floorplanning and layout.
+- Keep connector entry points at the bottom side of the enclosure where practical so water is discouraged from tracking inward.
+- Keep the USB connector internal-only for service and bring-up rather than exposing it as an always-accessible external port.
+- Include a Gore-Tex vent in the enclosure strategy.
+- Keep the ESP32-C3 at the top of the PCB with a clear antenna keepout region.
+- Place the LoRa module close to the ESP32-C3 so the digital interface stays short and tidy.
+- The LoRa coax should leave through a lower enclosure gland and run upward internally to the antenna mounted near the top of the enclosure.
+- Finish the PCB before freezing enclosure geometry; enclosure design follows the actual routed board, not the other way around.
+
+---
+
+## 13. Revision History
 
 | Version | Date | Notes |
 |---------|------|-------|
@@ -598,6 +587,8 @@ This table reflects the current design direction rather than a release-ready BOM
 | 0.2 | Feb 2026 | OSHWLab Stars entry revision: resolved TBD components, added consumption analytics, alert system, firmware architecture, dashboard spec, documentation plan, sustainability section, PCB guidelines, BOM with LCSC numbers |
 | 0.3 | Mar 2026 | Architecture simplification pass: removed shared-PCB assumption, removed node RTC and external watchdog from rev A, fixed pressure-sensor direction, corrected power-budget assumptions, and split node/gateway hardware strategy |
 | 0.4 | Mar 2026 | Active schematic-capture reconciliation: updated docs to current ESP32-C3, E22-900M22S, native USB, MCP73871, TPS63021, and TPS613222 design direction; flagged remaining USB and schematic-signoff gaps |
+| 0.5 | Mar 2026 | Rev A scope reduction: dropped battery telemetry and deferred environmental sensors so the spec matches the actual pressure-first schematic direction |
+| 0.6 | Mar 2026 | Latest netlist reviewed for polarity and protection sanity; project moved from schematic review into PCB floorplanning notes |
 
 ---
 
