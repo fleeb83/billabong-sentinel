@@ -107,7 +107,7 @@ Target rev A node consumption is roughly 4-6mAh/day at 15-minute intervals. A 1W
 <details>
 <summary><strong>Enclosure</strong></summary>
 
-ASA 3D-printed via JLCPCB, IP68 rated. Nitrile O-ring lid seal, IP68 PG9 cable gland, waterproof USB-C port for field firmware updates, Gore-Tex vent plug, and stainless mounting lugs for star picket or trough rail.
+ASA 3D-printed via JLCPCB, IP68 rated. Nitrile O-ring lid seal, IP68 PG9 cable gland, internal-only USB-C service access after lid removal, Gore-Tex vent plug, and stainless mounting lugs for star picket or trough rail. The enclosure should need opening only rarely, ideally never in normal service.
 
 </details>
 

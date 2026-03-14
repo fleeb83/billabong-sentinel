@@ -233,12 +233,12 @@ Rev A removes the external watchdog from the node to keep the power architecture
 
 | Parameter | Value |
 |-----------|-------|
-| Connector | USB-C receptacle on the node PCB, with waterproof enclosure strategy to be closed mechanically |
+| Connector | USB-C receptacle on the node PCB, internal-only after lid removal |
 | USB data path | Native ESP32-C3 USB |
-| Functions | Firmware flash, serial debug, 5V input power, provisioning / recovery access |
+| Functions | Firmware flash, serial debug, 5V input power, provisioning / recovery access during service |
 | Protection | USB data-line ESD device on the connector side of the series resistors |
 
-When USB is connected, the ESP32-C3 native USB path is the intended programming and debug interface. The final schematic still needs the USB-C receptacle, CC pull-downs, ESD device, and any boot/recovery support to be captured and reviewed against Espressif guidance.
+When USB is connected, the ESP32-C3 native USB path is the intended programming and debug interface. Rev A now assumes USB is internal-only and accessed only after opening the enclosure for service. The final schematic still needs the USB-C receptacle, CC pull-downs, ESD device, and any boot/recovery support to be captured and reviewed against Espressif guidance.
 
 ### 3.9 Node Identification and Provisioning
 
@@ -399,9 +399,9 @@ LoRa OTA is slow (~1 hour for 512KB at 1% duty cycle) but enables remote updates
 | Manufacture | JLCPCB 3D printing (MJF or SLA) |
 | Target IP rating | IP68 |
 | Dimensions | ~120 × 80 × 50mm (to be finalised in CAD) |
-| Lid seal | Nitrile O-ring in CNC-machined groove; lid secured with 4× M3 stainless screws |
+| Lid seal | Nitrile O-ring in CNC-machined groove; lid secured with 4-6× M3 stainless screws |
 | Cable entry | IP68 cable gland (PG9), sized to 8mm OD sensor cable |
-| USB-C port | IP68 waterproof panel mount USB-C; tethered rubber cap |
+| USB-C port | Internal-only service connector on the PCB; no external USB opening in rev A |
 | Solar connector | IP68 rated JST-PH 2-pin |
 | Antenna | SMA bulkhead, stainless, sealed with silicone o-ring |
 | Mounting | Two external lugs for M8 stainless U-bolt (trough rail or star picket mount) |
@@ -422,7 +422,7 @@ These steps are mandatory for IP68 integrity and must be followed during field i
 1. **Drip loop:** sensor cable must form a downward U-loop before entering the cable gland. Water running down the cable drips off the bottom of the loop and cannot wick into the gland.
 2. **Cable gland torque:** tighten to manufacturer specification (typically 2.5Nm for PG9). Hand-tight is insufficient.
 3. **O-ring inspection:** before each lid reinstallation, inspect the nitrile O-ring. Replace if flattened, cracked, or shows UV degradation. Spare O-rings included with each unit.
-4. **USB-C cap:** tethered cap must be fully seated and retaining ring finger-tightened when port not in use.
+4. **Service opening discipline:** if the enclosure is opened for USB service, clean and inspect the sealing surfaces before reassembly.
 5. **Vent plug:** must not be painted over, obscured by silicone sealant, or blocked.
 6. **SMA seal:** confirm antenna SMA nut is tight and O-ring is seated.
 
