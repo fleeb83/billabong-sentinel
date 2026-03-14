@@ -22,7 +22,7 @@ The web dashboard runs locally on the gateway. Alerts for low water, leaks, and 
 
 Commercial cellular water monitors run $500-$1,500 per unit plus monthly fees, and most don't work where there's no phone signal anyway. A Billabong Sentinel node comes in at around $125 AUD all up.
 
-**Status:** specification and design phase. EasyEDA Pro schematic capture is the current active stage.
+**Status:** active schematic capture and design review. The power tree, pressure front end, ESP32-C3, and LoRa module direction are captured in the working schematic, but the design is not yet at schematic signoff or PCB layout.
 
 ---
 
@@ -74,10 +74,10 @@ If a node doesn't have direct line-of-sight to the gateway, packets hop through 
 |-----------|-------|
 | MCU | ESP32-C3-MINI-1 (RISC-V, 160MHz) |
 | Deep sleep current | ~5µA |
-| LoRa IC | SX1276 via SPI |
+| LoRa module | EBYTE E22-900M22S (SX1262-based) via SPI |
 | Frequency | 915MHz (AU915, ACMA Class Licence) |
-| TX power | +17dBm (firmware-limited) |
-| Sensitivity | -148dBm |
+| TX power | ~22dBm module capability, firmware-limited as needed for compliance and power budget |
+| Sensitivity | ~-147dBm |
 | Mesh stack | RadioLib + custom mesh protocol |
 
 </details>
@@ -132,7 +132,7 @@ firmware/
 │   └── components/
 │       ├── lora_mesh/      # Mesh protocol over RadioLib
 │       ├── sensor_drivers/ # SHT40 and SHT31 (native I2C)
-│       └── provisioning/   # BLE + USB-C serial setup
+│       └── provisioning/   # BLE + native USB setup
 └── gateway/            # ESP-IDF project
     ├── main/
     └── components/
@@ -147,7 +147,7 @@ COLD_BOOT -> PROVISION_CHECK -> SAMPLE -> MESH_TX -> SLEEP
                   |
             (if unconfigured)
                   v
-            PROVISIONING (BLE or USB-C serial)
+            PROVISIONING (BLE or native USB)
 ```
 
 OTA:

@@ -8,7 +8,7 @@ Stock water is a constant headache on large rural properties. Troughs run dry, f
 
 Billabong Sentinel is a practical alternative. It uses LoRa mesh radio to link sensor nodes at each trough or dam back to a gateway at the homestead. The gateway runs a local web dashboard and can push alerts to Home Assistant via MQTT. No internet required, no subscription, and the nodes run indefinitely on a 1W solar panel.
 
-**Status:** specification and pre-schematic design phase. EasyEDA Pro schematic capture is the next active milestone.
+**Status:** active schematic capture. The current working design has the power tree, pressure front end, ESP32-C3, and LoRa module direction captured, but schematic review and cleanup are still in progress before PCB.
 
 **GitHub:** [https://github.com/fleeb83/billabong-sentinel](https://github.com/fleeb83/billabong-sentinel)
 
@@ -49,7 +49,7 @@ Packets route through neighbouring nodes if there's no direct path to the gatewa
 | Component | Part |
 |-----------|------|
 | MCU | ESP32-C3-MINI-1 (~5µA deep sleep) |
-| LoRa | SX1276 @ 915MHz (AU915) |
+| LoRa | EBYTE E22-900M22S (SX1262-based) @ 915MHz (AU915) |
 | Water level | Submersible pressure transducer, 0-5m, vented cable |
 | Ambient | SHT40 (external, 3D-printed Stevenson screen housing) |
 | Enclosure check | SHT31 (internal, PCB-mounted) |
@@ -67,7 +67,7 @@ The enclosure is ASA 3D-printed via JLCPCB, IP68 rated with a nitrile O-ring lid
 
 ### Firmware
 
-Planned around ESP-IDF v5.x (native, no Arduino). RadioLib for SX1276 with a custom lightweight mesh layer on top. FreeRTOS tasks on the gateway will handle concurrent LoRa receive, web serving, and MQTT. Remote node OTA over LoRa remains a later-stage goal.
+Planned around ESP-IDF v5.x (native, no Arduino). RadioLib for the E22-900M22S / SX1262 radio path with a custom lightweight mesh layer on top. FreeRTOS tasks on the gateway will handle concurrent LoRa receive, web serving, and MQTT. Remote node OTA over LoRa remains a later-stage goal.
 
 ---
 

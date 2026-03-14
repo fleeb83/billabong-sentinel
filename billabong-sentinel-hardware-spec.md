@@ -5,7 +5,7 @@
 **Author:** Russell Thomas
 **Date:** February 2026
 **License:** CERN-OHL-S v2 (hardware) · MIT (firmware) · CC BY 4.0 (documentation)
-**Status:** Draft, pre-schematic reconciliation for OSHWLab Stars 2026
+**Status:** Draft, active schematic capture reconciliation for OSHWLab Stars 2026
 
 ---
 
@@ -68,7 +68,7 @@ Rev A prioritises the node hardware first. The gateway is planned as a separate 
 2. Sensors powered up via switched rails
 3. Pressure transducer, SHT40, and SHT31 sampled
 4. Packet assembled: `{node_id, seq, water_mm, temp_c, humidity_pct, internal_temp_c, internal_humidity_pct, battery_mv, solar_mv, rssi_last}`
-5. SX1276 transmits via mesh route to gateway
+5. The E22-900M22S transmits via mesh route to gateway
 6. All peripherals powered down; ESP32-C3 returns to deep sleep
 7. Gateway timestamps packet reception, stores it in a circular buffer (planned LittleFS storage), and updates the dashboard
 
@@ -97,7 +97,7 @@ Configurable alert thresholds stored at the gateway, triggered conditions:
 | Core | Single-core RISC-V @ 160MHz |
 | Flash | 4MB (module-integrated) |
 | Wireless | WiFi 2.4GHz + BLE 5.0 |
-| LoRa | External SX1276 via SPI |
+| LoRa | External E22-900M22S (SX1262-based) via SPI |
 | Deep sleep current | ~5µA |
 | Supply voltage | 3.3V |
 
@@ -109,17 +109,17 @@ WiFi can be used for maintenance or provisioning assistance when USB is not prac
 
 | Parameter | Value |
 |-----------|-------|
-| IC | SX1276 |
+| Module | EBYTE E22-900M22S |
 | Frequency | 915MHz (AU915) |
-| Interface | SPI + CS / RST / DIO0 (exact GPIOs finalised during schematic capture) |
-| Max TX power | +17dBm (firmware-limited for ACMA compliance) |
-| Sensitivity | -148dBm |
+| Interface | SPI + NSS / NRST / BUSY / DIO1 plus TXEN and RXEN default-state controls |
+| Max TX power | ~22dBm module capability, firmware-limited as needed for compliance and power budget |
+| Sensitivity | ~-147dBm |
 | Sleep current | ~0.2µA |
 | Antenna | U.FL connector, external via SMA bulkhead |
-| RF ESD | PRTR5V0U2X TVS on antenna trace |
+| RF ESD | to be confirmed during RF/connector review |
 | Impedance | 50Ω coplanar waveguide on antenna trace |
 
-**PCB note:** RF trace from SX1276 to U.FL routed as 50Ω CPWG on the top copper layer with ground plane beneath. No vias on RF trace. Keepout area under antenna connection. Ground stitching vias around RF section perimeter.
+**PCB note:** RF trace from the E22-900M22S antenna pin to U.FL should be routed as 50Ω CPWG on the top copper layer with ground plane beneath. No vias on the RF trace. Keepout area under the antenna connection. Ground stitching vias around the RF section perimeter.
 
 ### 3.3 Water Level Sensor
 
@@ -134,7 +134,7 @@ WiFi can be used for maintenance or provisioning assistance when USB is not prac
 
 **Input protection chain (in order):**
 1. 1kΩ series resistor (limits fault current)
-2. PRTR5V0U2X TVS diode to GND (clamps transients from long cable)
+2. TVS diode to GND sized for the long outdoor cable run (the current working netlist uses `SMF5.0A`; final suitability still needs signoff)
 3. 10nF + 100Ω RC low-pass filter (rejects RF and switching noise)
 4. 2:1 resistor divider (100kΩ / 100kΩ), maps 0–4.5V sensor output to 0–2.25V, within ESP32-C3 ADC input range
 5. ADC input on ESP32-C3 (12-bit, 0–2.5V attenuation mode)
@@ -163,7 +163,7 @@ WiFi can be used for maintenance or provisioning assistance when USB is not prac
 | Location | PCB-mounted inside enclosure |
 | Alert threshold | >80% RH sustained for 30 minutes → seal breach alert |
 
-**I2C bus:** Single I2C bus. SHT40 external and SHT31 internal use addresses 0x44 and 0x45 respectively. Pull-ups are tied to the switched 3.3V sensor rail so they disappear during deep sleep and do not create a leakage path.
+**I2C bus:** Single I2C bus. SHT40 external and SHT31 internal use addresses 0x44 and 0x45 respectively. Pull-ups are intended to sit on a switched sensor-side rail so they disappear during deep sleep and do not create a leakage path. The exact switched 3.3V implementation still needs to be closed in the schematic.
 
 ### 3.5 Wake Strategy
 
@@ -250,12 +250,12 @@ Rev A removes the external watchdog from the node to keep the power architecture
 
 | Parameter | Value |
 |-----------|-------|
-| Connector | IP68 waterproof USB-C panel mount |
-| USB-UART | CH340C (auto-reset via RTS/DTR) |
-| Functions | Firmware flash, serial debug, 5V input power, OTA trigger |
-| Protection | ESD on USB data lines (PRTR5V0U2X) |
+| Connector | USB-C receptacle on the node PCB, with waterproof enclosure strategy to be closed mechanically |
+| USB data path | Native ESP32-C3 USB |
+| Functions | Firmware flash, serial debug, 5V input power, provisioning / recovery access |
+| Protection | USB data-line ESD device on the connector side of the series resistors |
 
-When USB is connected, the CH340C enumerates as a serial port. The auto-reset circuit should be designed around the ESP32-C3 enable and boot signals without reusing LoRa control lines or other strapping-sensitive functions.
+When USB is connected, the ESP32-C3 native USB path is the intended programming and debug interface. The final schematic still needs the USB-C receptacle, CC pull-downs, ESD device, and any boot/recovery support to be captured and reviewed against Espressif guidance.
 
 ### 3.9 Node Identification and Provisioning
 
@@ -267,7 +267,7 @@ When USB is connected, the CH340C enumerates as a serial port. The auto-reset ci
 ### 3.10 PCB Design Guidelines
 
 - **Layers:** 4-layer (Top signal / GND / 3.3V power / Bottom signal)
-- **RF section:** 50Ω CPWG trace from SX1276 to U.FL; no vias; copper pour keepout 2mm either side
+- **RF section:** 50Ω CPWG trace from E22-900M22S to U.FL; no vias; copper pour keepout 2mm either side
 - **Analog section:** Keep the pressure sensor divider and filter compact and away from the RF section, but do not split the ground plane unnecessarily on this class of board
 - **Decoupling:** 100nF + 10µF ceramic at every IC power pin; bulk 47µF on 3.3V rail
 - **Test points:** All critical nets (3.3V, VBAT, VSOLAR, switched 5V, SDA, SCL, SPI lines, ADC in)
@@ -279,8 +279,8 @@ When USB is connected, the CH340C enumerates as a serial port. The auto-reset ci
 
 - Avoid ESP32-C3 strapping pins for LoRa reset, rail enable, or other outputs that could disturb boot.
 - Reserve one ADC-capable GPIO exclusively for the pressure transducer input.
-- Reserve one interrupt-capable GPIO for SX1276 DIO0.
-- Reserve one GPIO for the switched 3.3V rail enable and one for the switched 5V excitation rail enable, unless both rails can share one gate safely.
+- Reserve GPIOs for E22-900M22S `BUSY`, `DIO1`, `NRST`, `NSS`, `TXEN`, and `RXEN` without disturbing boot.
+- Reserve one GPIO for the switched 5V excitation rail enable, and only add a separate switched 3.3V rail enable if the final sleep-leakage review justifies it.
 - Reserve a GPIO or comparator input for USB-VBUS detection if that feature survives schematic review.
 - Final GPIO allocation will be frozen during schematic capture against the ESP32-C3-MINI-1 datasheet and boot-strapping requirements.
 
@@ -354,7 +354,7 @@ Compatible with Home Assistant MQTT auto-discovery.
 **Target SDK:** ESP-IDF v5.x
 
 **Components/libraries:**
-- RadioLib (ESP-IDF HAL, SX1276 via `spi_master` driver)
+- RadioLib (ESP-IDF HAL, SX1262 / E22-900M22S via `spi_master` driver)
 - `driver/i2c_master` (ESP-IDF 5.x I2C driver for SHT40 and SHT31)
 - Custom SHT40 and SHT31 thin drivers (I2C register reads, no Arduino deps)
 - `nvs_flash` (NVS: config, calibration, node ID storage)
@@ -368,7 +368,7 @@ Compatible with Home Assistant MQTT auto-discovery.
 ```
 COLD_BOOT → PROVISION_CHECK → SAMPLE → MESH_TX → SLEEP
                   ↓ (if unconfigured)
-            PROVISIONING (BLE/serial config)
+            PROVISIONING (BLE/native USB config)
 ```
 
 **Deep sleep entry sequence:**
@@ -534,32 +534,26 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 
 ## 10. Bill of Materials: Node (Key Components)
 
-| Ref | Component | Part | LCSC # |
-|-----|-----------|------|--------|
-| U1 | MCU | ESP32-C3-MINI-1 | C2934569 |
-| U2 | LoRa | Ra-02 SX1276 module (Ai-Thinker) | C2833538 |
-| U3 | Solar / USB charger | MCP73871-2CAI/ML | C185603 |
-| U4 | Battery protection | DW01A | C351410 |
-| U5 | Battery protection FET | FS8205A | C908265 |
-| U6 | 5V sensor excitation regulator | TBD | TBD |
-| U8 | Humidity internal | SHT31-DIS-B | C296787 |
-| U9 | Humidity external | SHT40-AD1B | C2757512 |
-| U10 | 3.3V regulator | TPS63021DSJT | C116360 |
-| U11 | USB-UART | CH340C | C84681 |
-| U12 | 3.3V sensor rail switch | Si2301CDS (P-MOSFET) | C10487 |
-| U13 | 5V excitation rail switch | Si2301CDS (P-MOSFET) or equivalent | TBD |
-| Cx | VIN_CHG bulk capacitor | User-selected charger-input bulk capacitor | C3039902 |
-| D1 | Schottky solar | SS34 | C8678 |
-| D2 | TVS sensor input | PRTR5V0U2X | C12333 |
-| D3 | TVS LoRa RF | PRTR5V0U2X | C12333 |
-| D4 | TVS USB | PRTR5V0U2X | C12333 |
-| BT1 | 2x 18650 holder | MYOUNG BH-18650-B1BA007 | C6937126 |
-| J1 | USB-C panel mount | IP68 waterproof USB-C | TBD (Aliexpress) |
-| J2 | Solar input | IP68 JST-PH 2-pin | TBD |
-| J3 | Pressure sensor | IP68 cable gland PG9 | TBD |
-| J4 | Antenna | U.FL SMD | C388369 |
-| J5 | External SMA | SMA bulkhead IP67 | TBD |
-*LCSC numbers marked TBD will be confirmed during schematic capture. The 5V excitation regulator is intentionally left open until the pressure transducer part is frozen.*
+| Function | Current Direction | Part | LCSC # / Status |
+|----------|-------------------|------|-----------------|
+| MCU | locked | ESP32-C3-MINI-1-N4 | C2838502 |
+| LoRa module | locked | E22-900M22S | C411293 |
+| Solar / USB charger | locked | MCP73871-2CAI/ML | C185603 |
+| Battery protection IC | locked | DW01A | C351410 |
+| Battery protection FET | locked | FS8205A | C2830320 |
+| 3.3V regulator | locked | TPS63021DSJR | C202140 |
+| 5V excitation regulator | current direction | TPS613222ADBVR | C2071163 |
+| 5V excitation high-side switch | current direction | AO3401A + 2N7002 gate drive | C15127 + C8545 |
+| Sensor input TVS | current netlist part | SMF5.0A | C908213 |
+| Solar input diode | locked | B5819W | C8598 |
+| USB ideal-diode path | locked | AO3401A | C15127 |
+| VIN_CHG bulk capacitor | locked | user-selected charger-input bulk capacitor | C3039902 |
+| 2x 18650 holder | locked | MYOUNG BH-18650-B1BA007 | C6937126 |
+| Pressure connector | current direction | XH-3A-P | C2979572 |
+| USB data ESD | intended direction, not yet fully captured in latest netlist | USBLC6-2SC6 | C2827654 |
+| USB-C receptacle | intended direction, not yet fully captured in latest netlist | TYPE-C-31-M-12 | C165948 |
+
+This table reflects the current design direction rather than a release-ready BOM. The latest working netlist already captures the power tree, pressure front end, ESP32-C3, E22-900M22S, and 5V excitation path, but the USB-C/native-USB block and some sensor-side details still need closure before schematic signoff.
 
 ### 10.1 Externally Sourced Items (Not via JLCPCB)
 
@@ -602,7 +596,8 @@ Build log videos covering design decisions, PCB assembly, field deployment, and 
 |---------|------|-------|
 | 0.1 | Feb 2026 | Initial draft |
 | 0.2 | Feb 2026 | OSHWLab Stars entry revision: resolved TBD components, added consumption analytics, alert system, firmware architecture, dashboard spec, documentation plan, sustainability section, PCB guidelines, BOM with LCSC numbers |
-| 0.3 | Mar 2026 | Pre-schematic simplification pass: removed shared-PCB assumption, removed node RTC and external watchdog from rev A, fixed pressure-sensor direction, corrected power-budget assumptions, and split node/gateway hardware strategy |
+| 0.3 | Mar 2026 | Architecture simplification pass: removed shared-PCB assumption, removed node RTC and external watchdog from rev A, fixed pressure-sensor direction, corrected power-budget assumptions, and split node/gateway hardware strategy |
+| 0.4 | Mar 2026 | Active schematic-capture reconciliation: updated docs to current ESP32-C3, E22-900M22S, native USB, MCP73871, TPS63021, and TPS613222 design direction; flagged remaining USB and schematic-signoff gaps |
 
 ---
 

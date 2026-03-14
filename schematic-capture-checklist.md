@@ -15,7 +15,7 @@ Primary goal for rev A:
 - Dedicated low-power node PCB
 - Separate gateway PCB later
 - ESP32-C3-MINI-1 node
-- SX1276 LoRa radio
+- EBYTE `E22-900M22S` LoRa module (`SX1262`-based)
 - MCP73871 USB / solar charger
 - TPS63021 3.3V buck-boost regulator
 - 2x 18650 in parallel
@@ -63,7 +63,7 @@ Include:
 - TPS63021 main 3.3V regulator
 - enable pin behavior
 - bulk and local decoupling
-- switched 3.3V sensor rail
+- switched 3.3V sensor rail if retained after sleep-leakage review
 - switched 5V pressure-sensor excitation rail
 - rail control nets from MCU
 
@@ -81,8 +81,8 @@ Checklist:
 Include:
 
 - ESP32-C3-MINI-1 module
-- EN / BOOT / auto-programming circuit
-- CH340C USB-UART
+- EN / BOOT / reset support circuit
+- native USB data path on ESP32-C3
 - USB-C data/power/ESD
 - VBUS detect path if retained
 - local decoupling and module support parts
@@ -91,7 +91,7 @@ Checklist:
 
 - confirm all mandatory ESP32-C3 support circuitry
 - confirm boot-strapping pins are not abused
-- confirm CH340C auto-reset topology is boot-safe
+- confirm native USB wiring, reset behavior, and any boot/recovery access are boot-safe
 - confirm USB ESD and connector pinout
 - confirm exposed programming and debug access
 - confirm any unused module pins are handled correctly
@@ -100,18 +100,17 @@ Checklist:
 
 Include:
 
-- SX1276 device or module interface
+- E22-900M22S module interface
 - SPI bus
-- reset and DIO interrupt lines
+- reset, BUSY, and DIO interrupt lines
 - antenna connector path
 - RF ESD where justified
-- optional matching or reference network required by chosen implementation
+- module-specific support and default-state controls
 
 Checklist:
 
-- confirm whether rev A uses a bare SX1276 implementation or a module footprint
-- confirm exact reference circuit from the chosen radio implementation datasheet
-- confirm DIO lines actually required in firmware
+- confirm exact E22-900M22S support circuit from the module datasheet
+- confirm required BUSY / DIO1 / reset handling in firmware
 - confirm reset/default-state behavior at boot
 - confirm RF connector choice and grounding approach
 - confirm that schematic symbols/footprints match the chosen RF implementation
@@ -167,13 +166,13 @@ Checklist:
 - `+5V_SENSOR`
 - `+3V3_SENSOR`
 - `USB_VBUS`
-- `LORA_CS`
-- `LORA_RST`
-- `LORA_DIO0`
+- `LORA_NSS`
+- `LORA_NRST`
+- `LORA_DIO1`
+- `LORA_BUSY`
 - `I2C_SDA`
 - `I2C_SCL`
 - `PRESSURE_ADC`
-- `SENSOR_3V3_EN`
 - `SENSOR_5V_EN`
 
 ## Datasheet Review Gates
@@ -183,10 +182,9 @@ Checklist:
 Verify against primary datasheets:
 
 - ESP32-C3-MINI-1
-- chosen SX1276 implementation
+- E22-900M22S
 - MCP73871
 - TPS63021
-- CH340C
 - SHT40
 - SHT31
 - chosen pressure transducer
@@ -223,10 +221,8 @@ Verify:
 
 ## Remaining Decisions During Capture
 
-- exact pressure transducer part
 - exact 5V excitation regulator
-- pressure transducer board connector
-- exact SX1276 implementation choice for rev A footprint
+- exact USB-C/native-USB capture details
 - final GPIO allocation after boot-pin review
 
 ## Recommended Capture Order
